@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TaskFlow</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg:       #0e0f11;
+      --surface:  #16181c;
+      --border:   #2a2d35;
+      --muted:    #42464f;
+      --text:     #e8e9ec;
+      --soft:     #9198a6;
+      --accent:   #d4ff6e;
+      --high:     #ff6b6b;
+      --medium:   #ffcc5c;
+      --low:      #69d9a4;
+      --pending:  #9198a6;
+      --progress: #5b9cf6;
+      --done:     #69d9a4;
+      --danger:   #ff6b6b;
+      --radius:   10px;
+      --mono:     'DM Mono', monospace;
+      --serif:    'Fraunces', serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* HEADER */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: rgba(14,15,17,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .logo span { color: var(--soft); font-weight: 300; font-style: italic; }
+
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--soft);
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .status-dot.online  { background: var(--done); box-shadow: 0 0 6px var(--done); }
+    .status-dot.offline { background: var(--danger); }
+
+    /* LAYOUT */
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: calc(100vh - 61px);
+    }
+
+    /* SIDEBAR */
+    aside {
+      border-right: 1px solid var(--border);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* FORM FIELDS */
+    .field { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--soft);
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    /* BUTTONS */
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: var(--radius);
+      border: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:hover  { opacity: 0.88; }
+
+    .btn-primary { background: var(--accent); color: #0e0f11; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--soft);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
+
+    /* FILTER CHIPS */
+    .filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .chip {
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--soft);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip:hover  { border-color: var(--accent); color: var(--accent); }
+    .chip.active { background: var(--accent); color: #0e0f11; border-color: var(--accent); }
+
+    /* REPORT ROW */
+    .report-row { display: flex; gap: 8px; }
+    .report-row input { flex: 1; }
+
+    /* MAIN PANEL */
+    main { padding: 28px 32px; }
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .task-count {
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 300;
+    }
+    .task-count span { color: var(--accent); font-weight: 600; }
+
+    /* TASK CARDS */
+    #tasks-container { display: flex; flex-direction: column; gap: 10px; }
+
+    .empty-state { text-align: center; padding: 60px 0; color: var(--muted); }
+    .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+
+    .task-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: start;
+      animation: slideIn 0.2s ease;
+      transition: border-color 0.2s;
+    }
+    .task-card:hover { border-color: var(--muted); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .priority-bar {
+      width: 3px;
+      min-height: 40px;
+      border-radius: 3px;
+      margin-top: 2px;
+    }
+    .priority-bar.high   { background: var(--high); }
+    .priority-bar.medium { background: var(--medium); }
+    .priority-bar.low    { background: var(--low); }
+
+    .task-title {
+      font-family: var(--serif);
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .task-meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    .badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .badge-priority.high   { background: rgba(255,107,107,0.15); color: var(--high); }
+    .badge-priority.medium { background: rgba(255,204,92,0.15);  color: var(--medium); }
+    .badge-priority.low    { background: rgba(105,217,164,0.15); color: var(--low); }
+
+    .badge-status.pending     { background: rgba(145,152,166,0.15); color: var(--pending); }
+    .badge-status.in_progress { background: rgba(91,156,246,0.15);  color: var(--progress); }
+    .badge-status.done        { background: rgba(105,217,164,0.15); color: var(--done); }
+
+    .task-date { color: var(--muted); font-size: 11px; }
+
+    .task-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .icon-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--soft);
+      font-size: 11px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-family: var(--mono);
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .icon-btn.del:hover { border-color: var(--danger); color: var(--danger); }
+    .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .icon-btn:disabled:hover { border-color: var(--border); color: var(--soft); }
+
+    /* REPORT PANEL */
+    #report-panel {
+      display: none;
+      margin-top: 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      animation: slideIn 0.2s ease;
+    }
+
+    .report-title {
+      font-family: var(--serif);
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--soft);
+      margin-bottom: 18px;
+    }
+    .report-title strong { color: var(--accent); font-weight: 600; }
+
+    .report-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+
+    .report-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .report-card-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    .report-card-title.high   { color: var(--high); }
+    .report-card-title.medium { color: var(--medium); }
+    .report-card-title.low    { color: var(--low); }
+
+    .report-stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .report-stat:last-child { border-bottom: none; }
+    .report-stat-label { color: var(--soft); }
+
+    /* TOAST */
+    #toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      max-width: 320px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.25s;
+      z-index: 999;
+      pointer-events: none;
+      border: 1px solid transparent;
+    }
+    #toast.show    { opacity: 1; transform: translateY(0); }
+    #toast.success { background: #1a2e1a; border-color: var(--done);     color: var(--done); }
+    #toast.error   { background: #2e1a1a; border-color: var(--danger);   color: var(--danger); }
+    #toast.info    { background: #1a1e2e; border-color: var(--progress); color: var(--progress); }
+
+    /* SPINNER */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-row { text-align: center; padding: 40px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">Task<span>flow</span></div>
+    <div class="api-status">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">checking api...</span>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside>
+
+      <!-- Create Task Form -->
+      <div>
+        <div class="section-label">New Task</div>
+        <div class="field">
+          <label>Title</label>
+          <input type="text" id="f-title" placeholder="Task title..." />
+        </div>
+        <div class="field">
+          <label>Due Date</label>
+          <input type="date" id="f-date" />
+        </div>
+        <div class="field">
+          <label>Priority</label>
+          <select id="f-priority">
+            <option value="">Select priority...</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="createTask()">+ Create Task</button>
+      </div>
+
+      <!-- Filter by Status -->
+      <div>
+        <div class="section-label">Filter by Status</div>
+        <div class="filter-row">
+          <button class="chip active" onclick="setFilter(this, '')">All</button>
+          <button class="chip" onclick="setFilter(this, 'pending')">Pending</button>
+          <button class="chip" onclick="setFilter(this, 'in_progress')">In Progress</button>
+          <button class="chip" onclick="setFilter(this, 'done')">Done</button>
+        </div>
+      </div>
+
+      <!-- Daily Report -->
+      <div>
+        <div class="section-label">Daily Report</div>
+        <div class="report-row">
+          <input type="date" id="r-date" />
+          <button class="btn btn-outline" style="width:auto; padding: 10px 14px;" onclick="fetchReport()">Run</button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- MAIN PANEL -->
+    <main>
+      <div class="main-header">
+        <div class="task-count">
+          <span id="task-count-num">0</span> tasks
+        </div>
+        <button class="btn btn-outline" style="width:auto; padding:8px 16px;" onclick="loadTasks()">↻ Refresh</button>
+      </div>
+
+      <!-- Tasks will be injected here by JavaScript -->
+      <div id="tasks-container">
+        <div class="loading-row"><div class="spinner"></div></div>
+      </div>
+
+      <!-- Report results will appear here -->
+      <div id="report-panel"></div>
+    </main>
+
+  </div>
+
+  <!-- TOAST notification -->
+  <div id="toast"></div>
+
+<script>
+  const API = 'http://127.0.0.1:8000/api';
+  let currentFilter = '';
+
+  // ── Set today as the minimum date for task creation ──
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-date').min   = today;
+  document.getElementById('f-date').value = today;
+  document.getElementById('r-date').value = today;
+
+  // ─────────────────────────────────────────
+  // TOAST — shows a small notification
+  // ─────────────────────────────────────────
+  function toast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.className = '', 3200);
+  }
+
+  // ─────────────────────────────────────────
+  // API STATUS CHECK
+  // ─────────────────────────────────────────
+  async function checkApi() {
+    try {
+      const r = await fetch(`${API}/tasks`);
+      if (r.ok) {
+        document.getElementById('status-dot').className  = 'status-dot online';
+        document.getElementById('status-text').textContent = 'api connected';
+      }
+    } catch {
+      document.getElementById('status-dot').className  = 'status-dot offline';
+      document.getElementById('status-text').textContent = 'api offline';
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // LOAD TASKS
+  // ─────────────────────────────────────────
+  async function loadTasks() {
+    const container = document.getElementById('tasks-container');
+    container.innerHTML = '<div class="loading-row"><div class="spinner"></div></div>';
+
+    const url = currentFilter
+      ? `${API}/tasks?status=${currentFilter}`
+      : `${API}/tasks`;
+
+    try {
+      const r    = await fetch(url);
+      const data = await r.json();
+      const tasks = data.data || [];
+
+      document.getElementById('task-count-num').textContent = tasks.length;
+
+      if (!tasks.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">◇</div>
+            <p>${data.message || 'No tasks found.'}</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = tasks.map(renderTask).join('');
+
+    } catch {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p style="color:var(--danger)">Could not reach the API. Is the server running?</p>
+        </div>`;
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // RENDER A SINGLE TASK CARD
+  // ─────────────────────────────────────────
+  function renderTask(t) {
+    const nextStatus = { pending: 'in_progress', in_progress: 'done' };
+    const nextLabel  = { pending: '→ Start',     in_progress: '→ Done' };
+    const hasNext   = nextStatus[t.status];
+    const canDelete = t.status === 'done';
+    const dateStr   = new Date(t.due_date).toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'short', year: 'numeric'
+    });
+
+    return `
+      <div class="task-card" id="task-${t.id}">
+        <div class="priority-bar ${t.priority}"></div>
+        <div class="task-body">
+          <div class="task-title">${escHtml(t.title)}</div>
+          <div class="task-meta">
+            <span class="badge badge-priority ${t.priority}">${t.priority}</span>
+            <span class="badge badge-status ${t.status}">${t.status.replace('_',' ')}</span>
+            <span class="task-date">📅 ${dateStr}</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          ${hasNext
+            ? `<button class="icon-btn" onclick="advanceStatus(${t.id}, '${nextStatus[t.status]}')">${nextLabel[t.status]}</button>`
+            : ''}
+          <button
+            class="icon-btn del"
+            onclick="deleteTask(${t.id})"
+            ${canDelete ? '' : 'disabled'}
+            title="${canDelete ? 'Delete task' : 'Only done tasks can be deleted'}">
+            ✕
+          </button>
+        </div>
+      </div>`;
+  }
+
+  // ─────────────────────────────────────────
+  // CREATE TASK
+  // ─────────────────────────────────────────
+  async function createTask() {
+    const title    = document.getElementById('f-title').value.trim();
+    const due_date = document.getElementById('f-date').value;
+    const priority = document.getElementById('f-priority').value;
+
+    if (!title || !due_date || !priority) {
+      toast('Please fill in all fields.', 'error');
+      return;
+    }
+
+    try {
+      const r = await fetch(`${API}/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept':       'application/json',
+        },
+        body: JSON.stringify({ title, due_date, priority }),
+      });
+
+      const data = await r.json();
+
+      if (r.status === 201) {
+        toast(`Task "${title}" created!`, 'success');
+        document.getElementById('f-title').value    = '';
+        document.getElementById('f-priority').value = '';
+        loadTasks();
+      } else {
+        const errors = data.errors
+          ? Object.values(data.errors).flat().join(' ')
+          : data.message;
+        toast(errors, 'error');
+      }
+    } catch { toast('Network error.', 'error'); }
+  }
+
+  // ─────────────────────────────────────────
+  // ADVANCE STATUS  (pending→in_progress→done)
+  // ─────────────────────────────────────────
+  async function advanceStatus(id, newStatus) {
+    try {
+      const r = await fetch(`${API}/tasks/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept':       'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await r.json();
+
+      if (r.ok) {
+        toast(`Status updated to "${newStatus.replace('_',' ')}"`, 'success');
+        loadTasks();
+      } else {
+        toast(data.message, 'error');
+      }
+    } catch { toast('Network error.', 'error'); }
+  }
+
+  // ─────────────────────────────────────────
+  // DELETE TASK
+  // ─────────────────────────────────────────
+  async function deleteTask(id) {
+    try {
+      const r = await fetch(`${API}/tasks/${id}`, {
+        method:  'DELETE',
+        headers: { 'Accept': 'application/json' },
+      });
+
+      const data = await r.json();
+
+      if (r.ok) {
+        toast(data.message, 'success');
+        loadTasks();
+      } else {
+        toast(data.message, 'error');
+      }
+    } catch { toast('Network error.', 'error'); }
+  }
+
+  // ─────────────────────────────────────────
+  // FILTER CHIPS
+  // ─────────────────────────────────────────
+  function setFilter(btn, status) {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = status;
+    loadTasks();
+  }
+
+  // ─────────────────────────────────────────
+  // DAILY REPORT
+  // ─────────────────────────────────────────
+  async function fetchReport() {
+    const date  = document.getElementById('r-date').value;
+    if (!date) { toast('Pick a date for the report.', 'error'); return; }
+
+    const panel = document.getElementById('report-panel');
+    panel.style.display = 'block';
+    panel.innerHTML = '<div class="loading-row"><div class="spinner"></div></div>';
+
+    try {
+      const r    = await fetch(`${API}/tasks/report?date=${date}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await r.json();
+
+      if (!r.ok) {
+        toast(data.message, 'error');
+        panel.style.display = 'none';
+        return;
+      }
+
+      const s   = data.summary;
+      const fmt = d => new Date(d).toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+
+      panel.innerHTML = `
+        <div class="report-title">Report for <strong>${fmt(date)}</strong></div>
+        <div class="report-grid">
+          ${['high','medium','low'].map(p => `
+            <div class="report-card">
+              <div class="report-card-title ${p}">${p} priority</div>
+              <div class="report-stat">
+                <span class="report-stat-label">Pending</span>
+                <span>${s[p].pending}</span>
+              </div>
+              <div class="report-stat">
+                <span class="report-stat-label">In Progress</span>
+                <span>${s[p].in_progress}</span>
+              </div>
+              <div class="report-stat">
+                <span class="report-stat-label">Done</span>
+                <span>${s[p].done}</span>
+              </div>
+            </div>`).join('')}
+        </div>`;
+
+    } catch { toast('Network error.', 'error'); panel.style.display = 'none'; }
+  }
+
+  // ─────────────────────────────────────────
+  // SANITIZE HTML (prevent XSS)
+  // ─────────────────────────────────────────
+  function escHtml(str) {
+    return str
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  // ─────────────────────────────────────────
+  // INIT — runs when the page loads
+  // ─────────────────────────────────────────
+  checkApi();
+  loadTasks();
+
+  // Press Enter in title field to create task
+  document.getElementById('f-title').addEventListener('keydown', e => {
+    if (e.key === 'Enter') createTask();
+  });
+</script>
+
+</body>
+
+</body>
+</html>
